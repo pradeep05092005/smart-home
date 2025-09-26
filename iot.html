@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart home - IoT Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1', // Indigo
+                        secondary: '#94a3b8' // Slate
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .switch {
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .switch.on {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+        
+        .switch.off {
+            background: linear-gradient(45deg, #cbd5e1, #e2e8f0);
+        }
+        
+        .switch-knob {
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .switch.on .switch-knob {
+            transform: translateX(1.5rem) scale(1.1);
+            background: white;
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+        
+        .fan-speed-bar {
+            background: linear-gradient(90deg, #94a3b8 0%, #6366f1 50%, #8b5cf6 100%);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .fan-speed-knob {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
+        }
+        
+        .device-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            background: linear-gradient(145deg, #ffffff, #f8fafc);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+        
+        .device-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .pulse-on {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+            }
+        }
+        
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .glow-text {
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        
+        .slide-in {
+            animation: slideIn 0.6s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ripple:after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform .5s, opacity 1s;
+        }
+        
+        .ripple:active:after {
+            transform: scale(0, 0);
+            opacity: .2;
+            transition: 0s;
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <!-- Header -->
+    <header class="glass-card shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4 slide-in">
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center floating ripple">
+                        <i data-feather="home" class="text-white w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800 glow-text">Smart Home</h1>
+                        <p class="text-indigo-400 text-sm">Intelligent Living, Simplified</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="hidden md:flex items-center space-x-3 bg-white/80 rounded-full px-4 py-2 backdrop-blur-sm">
+                        <div class="w-3 h-3 bg-green-500 rounded-full pulse-on"></div>
+                        <span class="text-sm font-medium text-gray-700" id="api-status">Connected</span>
+                    </div>
+                    <div class="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center cursor-pointer ripple backdrop-blur-sm hover:scale-110 transition-transform duration-200" onclick="openSettings()">
+                        <i data-feather="settings" class="text-indigo-600 w-6 h-6"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+<!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Welcome Section -->
+        <section class="mb-8 slide-in" style="animation-delay: 0.1s">
+            <div class="glass-card rounded-2xl p-8 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">welcome 👋</h2>
+                <p class="text-indigo-400 text-lg">Your smart home is running at peak performance</p>
+                <div class="flex items-center space-x-4 mt-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span class="text-sm text-gray-600">7 devices online</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span class="text-sm text-gray-600">3 active now</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Controls Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+            <!-- Switch Cards -->
+            <div class="device-card rounded-2xl p-6 slide-in" style="animation-delay: 0.2s">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800 text-lg">Switch 1</h3>
+                    <i data-feather="zap" class="text-yellow-500 w-5 h-5"></i>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Living Room Light</p>
+                <div class="switch off relative w-20 h-10 rounded-full cursor-pointer ripple" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-8 h-8 bg-white rounded-full"></div>
+                </div>
+            </div>
+            <div class="device-card rounded-2xl p-6 slide-in" style="animation-delay: 0.3s">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800 text-lg">Switch 2</h3>
+                    <i data-feather="monitor" class="text-blue-500 w-5 h-5"></i>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Home Theater</p>
+                <div class="switch on relative w-20 h-10 rounded-full cursor-pointer ripple" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-8 h-8 bg-white rounded-full"></div>
+                </div>
+            </div>
+            <div class="device-card rounded-2xl p-6 slide-in" style="animation-delay: 0.4s">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800 text-lg">Switch 3</h3>
+                    <i data-feather="coffee" class="text-orange-500 w-5 h-5"></i>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Kitchen Appliances</p>
+                <div class="switch off relative w-20 h-10 rounded-full cursor-pointer ripple" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-8 h-8 bg-white rounded-full"></div>
+                </div>
+            </div>
+            <div class="device-card rounded-2xl p-6 slide-in" style="animation-delay: 0.5s">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-800 text-lg">Switch 4</h3>
+                    <i data-feather="droplet" class="text-cyan-500 w-5 h-5"></i>
+                </div>
+                <p class="text-sm text-gray-500 mb-6">Garden Irrigation</p>
+                <div class="switch on relative w-20 h-10 rounded-full cursor-pointer ripple" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-8 h-8 bg-white rounded-full"></div>
+                </div>
+            </div>
+<div class="device-card bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-800">Switch 5</h3>
+                    <i data-feather="power" class="text-secondary"></i>
+                </div>
+                <p class="text-sm text-secondary mb-4">General purpose switch</p>
+                <div class="switch off relative w-16 h-8 rounded-full cursor-pointer" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"></div>
+                </div>
+            </div>
+
+            <div class="device-card bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-800">Switch 6</h3>
+                    <i data-feather="power" class="text-secondary"></i>
+                </div>
+                <p class="text-sm text-secondary mb-4">General purpose switch</p>
+                <div class="switch off relative w-16 h-8 rounded-full cursor-pointer" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"></div>
+                </div>
+            </div>
+
+            <div class="device-card bg-white rounded-xl shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-800">Switch 7</h3>
+                    <i data-feather="power" class="text-secondary"></i>
+                </div>
+                <p class="text-sm text-secondary mb-4">General purpose switch</p>
+                <div class="switch on relative w-16 h-8 rounded-full cursor-pointer" onclick="toggleSwitch(this)">
+                    <div class="switch-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"></div>
+                </div>
+            </div>
+        </section>
+        <!-- Fan Control Section -->
+        <section class="bg-white rounded-xl shadow-md p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">Fan Control</h2>
+                    <p class="text-secondary">Adjust speed and control power</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-secondary" id="fan-status">Off</span>
+                    <div class="switch off relative w-16 h-8 rounded-full cursor-pointer" onclick="toggleFanPower(this)">
+                        <div class="switch-knob absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <div class="flex justify-between mb-2">
+                    <span class="text-sm text-secondary">Fan Speed</span>
+                    <span class="text-sm font-medium text-primary" id="speed-value">0%</span>
+                </div>
+                <div class="relative">
+                    <div class="fan-speed-bar w-full h-2 rounded-full"></div>
+                    <div class="fan-speed-knob absolute top-1/2 -translate-y-1/2 w-6 h-6 bg-primary rounded-full shadow-lg cursor-pointer"
+                         style="left: 0%"
+                         id="speed-knob"
+                         onmousedown="startDrag(event)"></div>
+                </div>
+                <div class="flex justify-between mt-1">
+                    <span class="text-xs text-secondary">Low</span>
+                    <span class="text-xs text-secondary">High</span>
+                </div>
+            </div>
+        </section>
+</main>
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold text-gray-800">ThingSpeak API Configuration</h3>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600">
+                    <i data-feather="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Channel ID</label>
+                    <input type="text" id="channel-id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your Channel ID">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Write API Key</label>
+                    <input type="password" id="write-key" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Enter your Write API Key">
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button onclick="saveSettings()" class="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition-colors">
+                        Save Settings
+                    </button>
+                </div>
+                
+                <div id="test-result" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
+            </div>
+</div>
+    </div>
+
+    <script>
+        // ThingSpeak API Configuration
+        let thingSpeakConfig = {
+            channelId: localStorage.getItem('thingSpeakChannelId') || '',
+            writeKey: localStorage.getItem('thingSpeakWriteKey') || ''
+        };
+// Modal functions
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('channel-id').value = thingSpeakConfig.channelId;
+            document.getElementById('write-key').value = thingSpeakConfig.writeKey;
+            feather.replace();
+        }
+function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
+            document.getElementById('test-result').classList.add('hidden');
+        }
+        function saveSettings() {
+            thingSpeakConfig.channelId = document.getElementById('channel-id').value;
+            thingSpeakConfig.writeKey = document.getElementById('write-key').value;
+            
+            localStorage.setItem('thingSpeakChannelId', thingSpeakConfig.channelId);
+            localStorage.setItem('thingSpeakWriteKey', thingSpeakConfig.writeKey);
+            
+            closeSettings();
+            updateApiStatus();
+        }
+        function showTestResult(message, type) {
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.classList.remove('hidden');
+            resultDiv.textContent = message;
+            resultDiv.className = `mt-4 p-3 rounded-lg text-sm ${
+                type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`;
+        }
+        function updateApiStatus() {
+            const statusElement = document.getElementById('api-status');
+            if (thingSpeakConfig.channelId && thingSpeakConfig.writeKey) {
+                statusElement.textContent = 'Write API Configured';
+                statusElement.classList.remove('text-secondary');
+                statusElement.classList.add('text-green-600');
+            } else {
+                statusElement.textContent = 'Write API Needed';
+                statusElement.classList.remove('text-green-600');
+                statusElement.classList.add('text-secondary');
+            }
+        }
+// Toggle switch function
+        function toggleSwitch(element) {
+            element.classList.toggle('on');
+            element.classList.toggle('off');
+            updateThingSpeak();
+        }
+        // Fan power toggle
+        function toggleFanPower(element) {
+            const isOn = element.classList.contains('on');
+            element.classList.toggle('on');
+            element.classList.toggle('off');
+            
+            const fanStatus = document.getElementById('fan-status');
+            const speedValue = document.getElementById('speed-value');
+            const speedKnob = document.getElementById('speed-knob');
+            
+            if (!isOn) {
+                fanStatus.textContent = 'On';
+                speedValue.textContent = '50%';
+                speedKnob.style.left = '50%';
+            } else {
+                fanStatus.textContent = 'Off';
+                speedValue.textContent = '0%';
+                speedKnob.style.left = '0%';
+            }
+            updateThingSpeak();
+        }
+// Fan speed drag functionality
+        let isDragging = false;
+
+        function startDrag(e) {
+            isDragging = true;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', onDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+        function onDrag(e) {
+            if (!isDragging) return;
+            
+            const container = e.target.parentElement;
+            const rect = container.getBoundingClientRect();
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let percentage = ((clientX - rect.left) / rect.width) * 100;
+            
+            percentage = Math.max(0, Math.min(100, percentage));
+            
+            const speedKnob = document.getElementById('speed-knob');
+            const speedValue = document.getElementById('speed-value');
+            
+            speedKnob.style.left = percentage + '%';
+            speedValue.textContent = Math.round(percentage) + '%';
+            
+            // Update ThingSpeak on drag end
+            if (e.type === 'touchend' || e.type === 'mouseup') {
+                updateThingSpeak();
+            }
+        }
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', stopDrag);
+        }
+
+        // ThingSpeak update function
+        async function updateThingSpeak() {
+            if (!thingSpeakConfig.channelId || !thingSpeakConfig.writeKey) {
+                console.log('ThingSpeak not configured');
+                return;
+            }
+
+            try {
+                // Get current switch states
+                const switches = document.querySelectorAll('.device-card .switch');
+                const switchStates = Array.from(switches).map((sw, index) => 
+                    sw.classList.contains('on') ? 1 : 0
+                );
+
+                // Get fan state and speed
+                const fanSwitch = document.querySelector('.fan-speed-bar').closest('section').querySelector('.switch');
+                const fanPower = fanSwitch.classList.contains('on') ? 1 : 0;
+                const fanSpeed = parseInt(document.getElementById('speed-value').textContent);
+
+                // Prepare data for ThingSpeak
+                // Field mapping: 
+                // field1: Switch 1, field2: Switch 2, ..., field7: Switch 7
+                // field8: Fan Power (0/1), field9: Fan Speed (0-100)
+                const data = {
+                    api_key: thingSpeakConfig.writeKey,
+                    field1: switchStates[0],
+                    field2: switchStates[1],
+                    field3: switchStates[2],
+                    field4: switchStates[3],
+                    field5: switchStates[4],
+                    field6: switchStates[5],
+                    field7: switchStates[6],
+                    field8: fanPower,
+                    field9: fanSpeed
+                };
+
+                const response = await axios.post(`https://api.thingspeak.com/update`, data, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+
+                if (response.data > 0) {
+                    console.log('Data sent to ThingSpeak successfully');
+                } else {
+                    console.log('Failed to send data to ThingSpeak');
+                }
+            } catch (error) {
+                console.error('Error sending data to ThingSpeak:', error);
+            }
+        }
+        // Load data from ThingSpeak on page load - Disabled since we only have write API
+        async function loadThingSpeakData() {
+            // Read functionality disabled - only write API available
+            console.log('Read functionality disabled - only write API is configured');
+        }
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateApiStatus();
+            feather.replace();
+        });
+</script>
+</body>
+</html>
